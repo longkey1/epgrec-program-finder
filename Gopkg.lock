@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  name = "github.com/BurntSushi/toml"
+  packages = ["."]
+  revision = "b26d9c308763d68093482582cea63d69be07a0f0"
+  version = "v0.3.0"
+
+[[projects]]
   name = "github.com/go-sql-driver/mysql"
   packages = ["."]
   revision = "a0583e0143b1624142adab07e0e97fe106d99561"
@@ -22,6 +28,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "062ce15c5f016085df1ff7e787cb312b9c2124fd14e7bff754de127f0c549441"
+  inputs-digest = "ec2bbec00b99c8c844672b8935f5e34198c0d3a3394adae786958001ec12260a"
   solver-name = "gps-cdcl"
   solver-version = 1

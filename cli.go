@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/BurntSushi/toml"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"github.com/urfave/cli"
@@ -24,13 +25,56 @@ type CLI struct {
 	errStream io.Writer
 }
 
+// Config ...
+type Config struct {
+	Database Database  `toml:"database"`
+	Excludes []Exclude `toml:"excludes"`
+}
+
+// Database ...
+type Database struct {
+	Driver   string `toml:"driver"`
+	Username string `toml:"username"`
+	Password string `toml:"password"`
+	Host     string `toml:"host"`
+	Port     string `toml:"port"`
+	DBName   string `toml:"dbname"`
+	Option   string `toml:"option"`
+}
+
+// DSN ...
+func (d *Database) DSN() string {
+	return fmt.Sprintf("%s:%s@(%s:%s)/%s?%s", d.Username, d.Password, d.Host, d.Port, d.DBName, d.Option)
+}
+
+// Exclude ...
+type Exclude struct {
+	Keyword string `toml:"keyword"`
+}
+
 // Run ...
 func (c *CLI) Run(args []string) int {
+	var configPath string
+
 	app := cli.NewApp()
 	app.Name = "epgrec-program-finder"
 	app.Version = "0.0.1"
 	app.Usage = "epgrec program finder"
-	app.Action = find
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:        "config, c",
+			Usage:       "Load configration from `FILE`",
+			Destination: &configPath,
+		},
+	}
+	app.Action = func(c *cli.Context) error {
+		conf, err := loadConfig(configPath)
+		if err != nil {
+			return err
+		}
+
+		return find(conf)
+	}
 
 	err := app.Run(args)
 	if err != nil {
@@ -47,25 +91,43 @@ type Program struct {
 	StartTime time.Time `db:"starttime"`
 }
 
-func find(ctx *cli.Context) error {
-	db, err := sqlx.Connect("mysql", "moto:motomoto@(192.168.0.40:3306)/epgrec?parseTime=true")
+func find(c *Config) error {
+	db, err := sqlx.Connect(c.Database.Driver, c.Database.DSN())
 	if err != nil {
-		log.Fatalln(err)
+		return err
 	}
 
-	programs := []Program{}
+	pgs := []Program{}
 	args := map[string]interface{}{
 		"category_id": 8,
 	}
-	nstmt, err := db.PrepareNamed("SELECT rp.title, rp.starttime FROM Recorder_programTbl AS rp LEFT OUTER JOIN Recorder_reserveTbl AS rr ON rr.program_id = rp.id WHERE rp.category_id = :category_id")
-	err = nstmt.Select(&programs, args)
+	sql := "SELECT rp.title, rp.starttime FROM Recorder_programTbl AS rp "
+	sql += "LEFT OUTER JOIN Recorder_reserveTbl AS rr ON rr.program_id = rp.id "
+	sql += "WHERE (rp.category_id = :category_id OR rp.genre2 = :category_id OR rp.genre3 = :category_id) "
+	sql += "AND rr.id IS NULL "
+	for k, e := range c.Excludes {
+		key := fmt.Sprintf("title%d", k)
+		args[key] = e.Keyword
+		sql += fmt.Sprintf("AND (rp.title NOT LIKE :%s) ", key)
+	}
+	nstmt, err := db.PrepareNamed(sql)
+	err = nstmt.Select(&pgs, args)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	for _, v := range programs {
-		fmt.Printf("%v\n", v)
+	for _, pg := range pgs {
+		fmt.Printf("%v\n", pg)
 	}
 
 	return nil
+}
+
+func loadConfig(path string) (*Config, error) {
+	c := &Config{}
+	if _, err := toml.DecodeFile(path, c); err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }
