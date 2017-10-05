@@ -1,0 +1,15 @@
+[database]
+driver ="mysql"
+username ="user"
+password = "pass"
+host = "localhost"
+port = "3306"
+dbname = "sampledb"
+option = "parseTime=true"
+
+[[excludes]]
+keyword = "みんなのうた%"
+[[excludes]]
+keyword = "%おじゃる丸%"
+[[excludes]]
+keyword = "%忍たま乱太郎%"
