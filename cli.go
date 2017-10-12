@@ -66,6 +66,11 @@ func (c *CLI) Run(args []string) int {
 			Usage:       "Load configration from `FILE`",
 			Destination: &configPath,
 		},
+		cli.StringFlag{
+			Name:  "since, s",
+			Value: time.Now().Format("2006-01-02 15:04:05"),
+			Usage: "Since start time",
+		},
 	}
 	app.Action = func(c *cli.Context) error {
 		conf, err := loadConfig(configPath)
@@ -73,7 +78,7 @@ func (c *CLI) Run(args []string) int {
 			return err
 		}
 
-		return find(conf)
+		return find(c, conf)
 	}
 
 	err := app.Run(args)
@@ -91,8 +96,8 @@ type Program struct {
 	StartTime time.Time `db:"starttime"`
 }
 
-func find(c *Config) error {
-	db, err := sqlx.Connect(c.Database.Driver, c.Database.DSN())
+func find(ctx *cli.Context, cnf *Config) error {
+	db, err := sqlx.Connect(cnf.Database.Driver, cnf.Database.DSN())
 	if err != nil {
 		return err
 	}
@@ -100,12 +105,14 @@ func find(c *Config) error {
 	pgs := []Program{}
 	args := map[string]interface{}{
 		"category_id": 8,
+		"starttime":   ctx.String("since"),
 	}
 	sql := "SELECT rp.title, rp.starttime FROM Recorder_programTbl AS rp "
 	sql += "LEFT OUTER JOIN Recorder_reserveTbl AS rr ON rr.program_id = rp.id "
 	sql += "WHERE (rp.category_id = :category_id OR rp.genre2 = :category_id OR rp.genre3 = :category_id) "
+	sql += "AND rp.starttime > :starttime "
 	sql += "AND rr.id IS NULL "
-	for k, e := range c.Excludes {
+	for k, e := range cnf.Excludes {
 		key := fmt.Sprintf("title%d", k)
 		args[key] = e.Keyword
 		sql += fmt.Sprintf("AND (rp.title NOT LIKE :%s) ", key)
@@ -117,7 +124,7 @@ func find(c *Config) error {
 	}
 
 	for _, pg := range pgs {
-		fmt.Printf("%v\n", pg)
+		fmt.Printf("%s %s\n", pg.StartTime.Format("2006-01-02 15:04:05"), pg.Title)
 	}
 
 	return nil
