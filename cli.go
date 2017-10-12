@@ -58,7 +58,7 @@ func (c *CLI) Run(args []string) int {
 
 	app := cli.NewApp()
 	app.Name = "epgrec-program-finder"
-	app.Version = "0.0.1"
+	app.Version = "0.0.2"
 	app.Usage = "epgrec program finder"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
