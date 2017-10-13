@@ -14,7 +14,7 @@ import (
 
 const (
 	// Version
-	Version string = "0.0.5"
+	Version string = "0.0.6"
 	// ExitCodeOK ...
 	ExitCodeOK int = 0
 	// ExitCodeError ..
@@ -139,11 +139,11 @@ func find(ctx *cli.Context, cnf *Config) error {
 	}
 
 	if len(pgs) > 0 {
-		fmt.Println("No programs")
-	} else {
 		for _, pg := range pgs {
 			fmt.Printf("%s %02dch %s\n", pg.StartTime.Format("2006-01-02 15:04:05"), pg.Channel, pg.Title)
 		}
+	} else {
+		fmt.Println("Not found  programs.")
 	}
 
 	return nil
