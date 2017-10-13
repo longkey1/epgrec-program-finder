@@ -59,7 +59,7 @@ func (c *CLI) Run(args []string) int {
 
 	app := cli.NewApp()
 	app.Name = "epgrec-program-finder"
-	app.Version = "0.0.3"
+	app.Version = "0.0.4"
 	app.Usage = "epgrec program finder"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -115,19 +115,19 @@ func find(ctx *cli.Context, cnf *Config) error {
 	sql += "AND rp.starttime > :starttime "
 	sql += "AND rr.id IS NULL "
 	for k, e := range cnf.Excludes {
-		keyword := fmt.Sprintf("title%d", k)
-		channel := fmt.Sprintf("channel%d", k)
 		condition := ""
 		if len(e.Keyword) > 0 {
+			keyword := fmt.Sprintf("title%d", k)
 			args[keyword] = e.Keyword
-			condition += fmt.Sprintf("rp.title NOT LIKE :%s", keyword)
+			condition += fmt.Sprintf("rp.title LIKE :%s ", keyword)
 		}
 		if len(condition) > 0 && e.Channel > 0 {
+			channel := fmt.Sprintf("channel%d", k)
 			args[channel] = e.Channel
-			condition += fmt.Sprintf("AND rp.channel = :%s", channel)
+			condition += fmt.Sprintf("AND rp.channel = :%s ", channel)
 		}
 		if len(condition) > 0 {
-			sql += fmt.Sprintf("AND (%s) ", condition)
+			sql += fmt.Sprintf("AND NOT (%s) ", condition)
 		}
 	}
 	nstmt, err := db.PrepareNamed(sql)
@@ -137,7 +137,7 @@ func find(ctx *cli.Context, cnf *Config) error {
 	}
 
 	for _, pg := range pgs {
-		fmt.Printf("%s %0d %s\n", pg.StartTime.Format("2006-01-02 15:04:05"), pg.Channel, pg.Title)
+		fmt.Printf("%s %02dch %s\n", pg.StartTime.Format("2006-01-02 15:04:05"), pg.Channel, pg.Title)
 	}
 
 	return nil
