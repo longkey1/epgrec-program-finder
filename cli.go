@@ -136,8 +136,12 @@ func find(ctx *cli.Context, cnf *Config) error {
 		log.Fatalln(err)
 	}
 
-	for _, pg := range pgs {
-		fmt.Printf("%s %02dch %s\n", pg.StartTime.Format("2006-01-02 15:04:05"), pg.Channel, pg.Title)
+	if len(pgs) > 0 {
+		fmt.Println("No programs")
+	} else {
+		for _, pg := range pgs {
+			fmt.Printf("%s %02dch %s\n", pg.StartTime.Format("2006-01-02 15:04:05"), pg.Channel, pg.Title)
+		}
 	}
 
 	return nil
