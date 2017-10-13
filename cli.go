@@ -13,6 +13,8 @@ import (
 )
 
 const (
+	// Version
+	Version string = "0.0.5"
 	// ExitCodeOK ...
 	ExitCodeOK int = 0
 	// ExitCodeError ..
@@ -59,7 +61,7 @@ func (c *CLI) Run(args []string) int {
 
 	app := cli.NewApp()
 	app.Name = "epgrec-program-finder"
-	app.Version = "0.0.4"
+	app.Version = Version
 	app.Usage = "epgrec program finder"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
