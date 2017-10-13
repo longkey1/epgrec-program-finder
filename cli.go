@@ -50,6 +50,7 @@ func (d *Database) DSN() string {
 // Exclude ...
 type Exclude struct {
 	Keyword string `toml:"keyword"`
+	Channel int    `toml:"channel"`
 }
 
 // Run ...
@@ -58,7 +59,7 @@ func (c *CLI) Run(args []string) int {
 
 	app := cli.NewApp()
 	app.Name = "epgrec-program-finder"
-	app.Version = "0.0.2"
+	app.Version = "0.0.3"
 	app.Usage = "epgrec program finder"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -93,6 +94,7 @@ func (c *CLI) Run(args []string) int {
 // Program ...
 type Program struct {
 	Title     string    `db:"title"`
+	Channel   int       `db:"channel"`
 	StartTime time.Time `db:"starttime"`
 }
 
@@ -107,15 +109,26 @@ func find(ctx *cli.Context, cnf *Config) error {
 		"category_id": 8,
 		"starttime":   ctx.String("since"),
 	}
-	sql := "SELECT rp.title, rp.starttime FROM Recorder_programTbl AS rp "
+	sql := "SELECT rp.title, rp.channel, rp.starttime FROM Recorder_programTbl AS rp "
 	sql += "LEFT OUTER JOIN Recorder_reserveTbl AS rr ON rr.program_id = rp.id "
 	sql += "WHERE (rp.category_id = :category_id OR rp.genre2 = :category_id OR rp.genre3 = :category_id) "
 	sql += "AND rp.starttime > :starttime "
 	sql += "AND rr.id IS NULL "
 	for k, e := range cnf.Excludes {
-		key := fmt.Sprintf("title%d", k)
-		args[key] = e.Keyword
-		sql += fmt.Sprintf("AND (rp.title NOT LIKE :%s) ", key)
+		keyword := fmt.Sprintf("title%d", k)
+		channel := fmt.Sprintf("channel%d", k)
+		condition := ""
+		if len(e.Keyword) > 0 {
+			args[keyword] = e.Keyword
+			condition += fmt.Sprintf("rp.title NOT LIKE :%s", keyword)
+		}
+		if len(condition) > 0 && e.Channel > 0 {
+			args[channel] = e.Channel
+			condition += fmt.Sprintf("AND rp.channel = :%s", channel)
+		}
+		if len(condition) > 0 {
+			sql += fmt.Sprintf("AND (%s) ", condition)
+		}
 	}
 	nstmt, err := db.PrepareNamed(sql)
 	err = nstmt.Select(&pgs, args)
@@ -124,7 +137,7 @@ func find(ctx *cli.Context, cnf *Config) error {
 	}
 
 	for _, pg := range pgs {
-		fmt.Printf("%s %s\n", pg.StartTime.Format("2006-01-02 15:04:05"), pg.Title)
+		fmt.Printf("%s %0d %s\n", pg.StartTime.Format("2006-01-02 15:04:05"), pg.Channel, pg.Title)
 	}
 
 	return nil
